@@ -3,6 +3,7 @@ import { ReviewRequestSchema } from "../validation.js";
 import { defaultLimiter } from "../rateLimit.js";
 import { reviewCode, AIReviewError } from "../claude.js";
 import { logReviewCost, logReviewError, logRateLimit } from "../logger.js";
+import { recordReview } from "../db/persistence.js";
 
 // ─── Client-facing error messages (never expose internals) ──────────────────
 
@@ -111,13 +112,38 @@ export async function handleReviewRequest(
     try {
         const result = await reviewCode(code, language);
         const durationMs = Math.round(performance.now() - startTime);
+        const inputTokens = Math.ceil(code.length / 4);
+        const outputTokens = Math.ceil(JSON.stringify(result).length / 4);
 
+        // Dual: stdout log (observability) + DB write (persistence)
         logReviewCost({
-            inputTokens: Math.ceil(code.length / 4),
-            outputTokens: Math.ceil(JSON.stringify(result).length / 4),
+            inputTokens,
+            outputTokens,
             clientIp: rateKey,
             durationMs,
         });
+
+        const persistResult = recordReview({
+            id: requestId,
+            clientIp: rateKey,
+            code,
+            language,
+            status: "success",
+            result,
+            inputTokens,
+            outputTokens,
+            durationMs,
+        });
+
+        // If DB write fails, log to stderr — response still succeeds
+        if (!persistResult.ok) {
+            logReviewError({
+                requestId,
+                errorCode: "PERSISTENCE_FAILURE",
+                clientIp: rateKey,
+                durationMs,
+            });
+        }
 
         return success(result, rateLimitHeaders);
     } catch (err: unknown) {
@@ -129,10 +155,21 @@ export async function handleReviewRequest(
                 clientCode: "INTERNAL_ERROR",
             };
 
+            // Dual: stderr log + DB write
             logReviewError({
                 requestId,
                 errorCode: err.code,
                 clientIp: rateKey,
+                durationMs,
+            });
+
+            recordReview({
+                id: requestId,
+                clientIp: rateKey,
+                code,
+                language,
+                status: "error",
+                errorCode: err.code,
                 durationMs,
             });
 
@@ -148,6 +185,16 @@ export async function handleReviewRequest(
             requestId,
             errorCode: "UNEXPECTED",
             clientIp: rateKey,
+            durationMs,
+        });
+
+        recordReview({
+            id: requestId,
+            clientIp: rateKey,
+            code,
+            language,
+            status: "error",
+            errorCode: "UNEXPECTED",
             durationMs,
         });
 
