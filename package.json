@@ -1,0 +1,21 @@
+{
+  "name": "ai-code-review",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/claude.ts",
+    "test": "tsx src/claude.test.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "tsx": "^4.19.3",
+    "@types/node": "^22.13.4"
+  }
+}

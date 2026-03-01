@@ -1,0 +1,343 @@
+📘 Technical Design Document
+Project: CodeLens AI (AI Code Reviewer SaaS)
+1️⃣ System Overview
+🎯 Objective
+
+Build a scalable, secure AI-powered code review platform using modern full-stack architecture.
+
+The system must:
+
+Handle structured AI responses
+
+Be safe against abuse
+
+Be horizontally scalable
+
+Support freemium monetization
+
+2️⃣ High-Level Architecture
+Browser (Next.js Client)
+        ↓
+API Layer (App Router)
+        ↓
+Middleware (Auth + Rate Limit)
+        ↓
+Validation Layer (Zod)
+        ↓
+AI Service Layer
+        ↓
+Persistence Layer (Prisma + PostgreSQL)
+        ↓
+Response Formatter
+        ↓
+Client UI (Tabs Rendering)
+3️⃣ Architectural Principles
+
+Stateless backend
+
+Strict schema validation
+
+Structured JSON AI responses
+
+No raw AI rendering
+
+Defensive programming
+
+Separation of concerns
+
+4️⃣ Folder Structure (Production Ready)
+/app
+  /api
+    /review
+      route.ts
+  /dashboard
+  /login
+  /pricing
+  layout.tsx
+  page.tsx
+
+/lib
+  ai.ts
+  db.ts
+  rate-limit.ts
+  validator.ts
+  auth.ts
+
+/prisma
+  schema.prisma
+
+/components
+  CodeEditor.tsx
+  ReviewTabs.tsx
+  LoadingState.tsx
+  PlanBadge.tsx
+
+/types
+  review.ts
+
+Clean. Maintainable. Scalable.
+
+5️⃣ Detailed Component Design
+🧩 5.1 Frontend Layer
+CodeEditor Component
+
+Monaco Editor
+
+Controlled input
+
+Language dropdown
+
+Submit handler
+
+Character counter
+
+ReviewTabs Component
+
+Tabs:
+
+Bugs
+
+Complexity
+
+Security
+
+Clean Code
+
+Optimization
+
+Improved Code
+
+All sanitized before rendering.
+
+🧩 5.2 API Route Design
+Endpoint
+POST /api/review
+Request Body
+{
+  language: string;
+  code: string;
+}
+Validation
+
+Language enum validation
+
+Code length limit
+
+Strip null bytes
+
+Trim input
+
+🧩 5.3 Rate Limiting
+
+Strategy:
+
+Redis (Upstash)
+
+Key = userId or IP
+
+Sliding window
+
+Free:
+
+5 requests/day
+
+Pro:
+
+Unlimited (soft cap monitoring)
+
+🧩 5.4 AI Service Layer
+
+This must be isolated.
+
+ai.ts responsibilities:
+
+Prompt creation
+
+Function-calling enforcement
+
+JSON schema enforcement
+
+Timeout handling
+
+Retry mechanism
+
+Strict JSON Schema
+{
+  bugs: string[],
+  complexity: {
+    time: string,
+    space: string,
+    explanation: string
+  },
+  cleanCode: string[],
+  security: string[],
+  optimization: string[],
+  improvedCode: string
+}
+
+If AI response invalid:
+
+Reject
+
+Retry once
+
+Return safe error
+
+6️⃣ Database Design
+User Table
+
+id (UUID)
+
+email (unique)
+
+name
+
+plan (FREE | PRO)
+
+createdAt
+
+Review Table
+
+id (UUID)
+
+userId (FK)
+
+language
+
+code (TEXT)
+
+result (JSONB)
+
+createdAt (indexed)
+
+Indexing Strategy
+
+Index userId
+
+Index createdAt
+
+JSONB for flexible schema
+
+7️⃣ Security Design
+🚨 Threat Model
+1️⃣ Prompt Injection
+
+Mitigation:
+
+Ignore code comments in prompt
+
+Use system-level instruction precedence
+
+2️⃣ XSS
+
+Escape AI output
+
+Use DOMPurify if rendering markdown
+
+3️⃣ API Abuse
+
+Rate limiting
+
+Input size limit
+
+Monitoring logs
+
+4️⃣ Data Exposure
+
+Never store API keys client-side
+
+Use environment variables
+
+No code execution sandbox
+
+8️⃣ Error Handling Strategy
+AI Failure
+
+Return structured fallback:
+
+{
+  "error": "AI service temporarily unavailable"
+}
+Validation Failure
+
+400 response
+
+Detailed validation message
+
+Rate Limit Exceeded
+
+429 response
+
+Retry-After header
+
+9️⃣ Performance Considerations
+
+AI call is main latency (3–5s)
+
+Use streaming in future
+
+Avoid unnecessary DB writes
+
+Use Edge runtime cautiously (OpenAI SDK limitations)
+
+🔟 Observability
+
+Integrate:
+
+Sentry (error tracking)
+
+Logging middleware
+
+Track:
+
+AI cost per user
+
+Avg response time
+
+Failure rate
+
+1️⃣1️⃣ Scalability Plan
+
+Phase 1:
+
+Vercel serverless
+
+Single DB instance
+
+Phase 2:
+
+Background AI processing queue
+
+Caching repeated submissions
+
+Horizontal scaling
+
+1️⃣2️⃣ Future Extension Architecture
+
+Design AI service modularly so later you can plug:
+
+GitHub Repo Analyzer
+
+Multi-file parsing
+
+Static analysis engine
+
+VS Code extension
+
+This becomes:
+
+Developer Intelligence Platform
+
+🚀 Final Evaluation
+
+This design:
+
+Is production-ready
+
+Avoids common AI SaaS mistakes
+
+Is scalable
+
+Is secure
+
+Is monetizable

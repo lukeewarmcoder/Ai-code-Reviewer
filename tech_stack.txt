@@ -1,0 +1,62 @@
+🧠 AI Code Reviewer – Final Free-Optimized Stack
+🖥 Frontend + Backend
+
+Next.js 14 (App Router)
+
+Hosted on Vercel (Free Tier)
+
+Single monorepo. No separate backend server.
+
+🗄 Database
+
+Neon PostgreSQL (Free Tier)
+
+ORM: Prisma
+
+Reason:
+
+Proper relational DB
+
+JSONB support
+
+Scalable later without migration pain
+
+🔐 Authentication
+
+Auth.js (NextAuth)
+
+JWT session strategy
+
+GitHub + Google OAuth
+
+No paid auth provider.
+
+🚦 Rate Limiting
+
+Upstash Redis (Free Tier)
+
+For:
+
+5 reviews/day limit
+
+Abuse protection
+
+🧠 AI Engine
+
+OpenAI gpt-4o-mini (cheap structured output)
+
+Alternative (not recommended for production yet):
+
+Local Ollama
+
+🎨 UI
+
+Tailwind CSS
+
+shadcn/ui
+
+Monaco Editor
+
+💳 Payments (Later)
+
+Stripe (no upfront cost)

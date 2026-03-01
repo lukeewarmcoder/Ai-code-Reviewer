@@ -1,0 +1,214 @@
+🧠 AI Engine – Master TODO List
+🟢 1️⃣ Define Output Contract (First, Always)
+
+Before touching API calls:
+
+ Define strict TypeScript interface
+
+ Freeze response schema (do NOT change casually)
+
+ Decide which fields are required vs optional
+
+ Version your AI schema (v1)
+
+Example Interface
+export interface AIReviewResult {
+  bugs: string[];
+  complexity: {
+    time: string;
+    space: string;
+    explanation: string;
+  };
+  cleanCode: string[];
+  security: string[];
+  optimization: string[];
+  improvedCode: string;
+}
+
+No flexibility here. Stability > creativity.
+
+🟢 2️⃣ Build Prompt Architecture
+Tasks:
+
+ Write system prompt (Senior Software Engineer role)
+
+ Define strict JSON-only rule
+
+ Forbid markdown
+
+ Forbid extra text
+
+ Wrap user code in safe delimiter block
+
+ Add instruction to ignore code comments overriding rules
+
+ Keep temperature low (0.2–0.4)
+
+🟢 3️⃣ Input Processing Layer
+
+Before sending to AI:
+
+ Trim whitespace
+
+ Validate max character length
+
+ Remove null bytes
+
+ Optionally strip extremely suspicious override phrases
+
+ Detect language (if not provided)
+
+ Hash code for caching (future feature)
+
+Never trust raw input.
+
+🟢 4️⃣ API Client Setup
+
+ Initialize Claude/OpenAI client
+
+ Set request timeout
+
+ Set max_tokens limit
+
+ Set temperature
+
+ Add retry logic (1 retry max)
+
+ Catch API errors
+
+ Log latency
+
+🟢 5️⃣ JSON Enforcement Layer (CRITICAL)
+
+This is where most AI apps fail.
+
+ Extract JSON from response
+
+ Remove accidental markdown wrapping
+
+ Attempt JSON.parse
+
+ Validate against Zod schema
+
+ If invalid → retry once
+
+ If still invalid → safe fallback error
+
+Never render raw AI text.
+
+🟢 6️⃣ Validation Layer
+
+Use Zod:
+
+ Validate structure
+
+ Validate arrays
+
+ Ensure required fields exist
+
+ Ensure no unexpected fields
+
+ Enforce string length limits
+
+Reject malformed responses.
+
+🟢 7️⃣ Security Hardening
+
+AI-specific security:
+
+ Protect against prompt injection
+
+ Never execute user code
+
+ Escape output before rendering
+
+ Reject extremely large outputs
+
+ Log suspicious attempts
+
+🟢 8️⃣ Cost Control Logic
+
+AI = cost center.
+
+ Log tokens used
+
+ Log cost estimate
+
+ Set max input size
+
+ Set max output size
+
+ Add per-user usage counter
+
+ Implement daily cap
+
+🟢 9️⃣ Testing Suite (AI-Specific)
+
+Create a manual test checklist:
+
+Test Cases:
+
+ Correct clean code
+
+ Code with obvious bug
+
+ O(n²) inefficiency
+
+ SQL injection example
+
+ XSS example
+
+ Infinite recursion
+
+ Malicious override comment
+
+ Empty input
+
+ Very long input
+
+AI must behave predictably.
+
+🟢 🔟 Error Handling Strategy
+
+Design structured fallback:
+
+{
+  "success": false,
+  "error": "AI temporarily unavailable"
+}
+
+Handle:
+
+Timeout
+
+API rate limit
+
+Invalid JSON
+
+Internal parsing failure
+
+Never expose raw AI errors to client.
+
+🟢 1️⃣1️⃣ Observability
+
+ Log response time
+
+ Log token usage
+
+ Log failure rate
+
+ Track malformed response frequency
+
+This helps you tune prompts later.
+
+🟢 1️⃣2️⃣ Future Improvements (Optional)
+
+ Code quality score (0–100)
+
+ Beginner vs Advanced mode
+
+ Adaptive explanation level
+
+ Model fallback system
+
+ Caching repeated submissions
