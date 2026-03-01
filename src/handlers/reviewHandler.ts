@@ -3,6 +3,13 @@ import { ReviewRequestSchema } from "../validation.js";
 import { defaultLimiter } from "../rateLimit.js";
 import { reviewCode, AIReviewError } from "../claude.js";
 
+// ─── Client-facing error messages (never expose internals) ──────────────────
+
+const PUBLIC_MESSAGES: Record<string, string> = {
+    AI_UNAVAILABLE: "The AI service is currently unavailable.",
+    AI_MALFORMED_RESPONSE: "The AI service returned an invalid response.",
+};
+
 // ─── Response type ───────────────────────────────────────────────────────────
 
 export type ReviewHttpResponse = {
@@ -52,6 +59,7 @@ export async function handleReviewRequest(
     const requestId = randomUUID();
     const baseHeaders: Record<string, string> = {
         "X-Request-Id": requestId,
+        "Content-Type": "application/json",
     };
 
     // ── 1. Input validation ──────────────────────────────────────────────────
@@ -59,21 +67,19 @@ export async function handleReviewRequest(
     const parsed = ReviewRequestSchema.safeParse(input);
 
     if (!parsed.success) {
-        const issues = parsed.error.issues
-            .map((i) => `${i.path.join(".")}: ${i.message}`)
-            .join("; ");
-
-        return failure(400, "INVALID_INPUT", issues, baseHeaders);
+        return failure(400, "INVALID_INPUT", "Invalid request payload.", baseHeaders);
     }
 
     const { code, language } = parsed.data;
 
     // ── 2. Rate limit check ──────────────────────────────────────────────────
 
-    const rateResult = defaultLimiter.check(clientIp);
+    const rateKey = clientIp || "anonymous";
+    const rateResult = defaultLimiter.check(rateKey);
 
     const rateLimitHeaders: Record<string, string> = {
         ...baseHeaders,
+        "X-RateLimit-Limit": "5",
         "X-RateLimit-Remaining": rateResult.remaining.toString(),
     };
 
@@ -106,7 +112,7 @@ export async function handleReviewRequest(
             return failure(
                 mapping.status,
                 mapping.clientCode,
-                err.message,
+                PUBLIC_MESSAGES[mapping.clientCode] ?? "An unexpected error occurred.",
                 rateLimitHeaders
             );
         }
