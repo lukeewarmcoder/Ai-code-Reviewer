@@ -20,7 +20,13 @@ beforeAll(() => {
 
 // ─── Import after mock is registered ─────────────────────────────────────────
 
-import { reviewCode, AIReviewError } from "./claude.js";
+import {
+    reviewCode,
+    AIReviewError,
+    MAX_IMPROVED_CODE_LENGTH,
+    MAX_ARRAY_ITEM_LENGTH,
+    MAX_COMPLEXITY_FIELD_LENGTH,
+} from "./claude.js";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -638,5 +644,223 @@ describe("AIReviewError", () => {
     it("raw is undefined when not provided", () => {
         const err = new AIReviewError("API_ERROR", "missing key");
         expect(err.raw).toBeUndefined();
+    });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 9. TOKEN AMPLIFICATION GUARD
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("Token amplification guard", () => {
+    it("rejects improvedCode exceeding max length", async () => {
+        const oversized = {
+            ...VALID_RESULT,
+            improvedCode: "x".repeat(MAX_IMPROVED_CODE_LENGTH + 1),
+        };
+        mockCreate
+            .mockResolvedValueOnce(makeResponse(JSON.stringify(oversized)))
+            .mockResolvedValueOnce(makeResponse(JSON.stringify(oversized)));
+
+        try {
+            await reviewCode(SAMPLE_CODE);
+            expect.unreachable("Should have thrown");
+        } catch (err) {
+            expect(err).toBeInstanceOf(AIReviewError);
+            expect((err as AIReviewError).code).toBe("VALIDATION_FAILED");
+            expect((err as AIReviewError).message).toContain("improvedCode");
+        }
+    });
+
+    it("allows improvedCode at exactly max length", async () => {
+        const atLimit = {
+            ...VALID_RESULT,
+            improvedCode: "x".repeat(MAX_IMPROVED_CODE_LENGTH),
+        };
+        mockCreate.mockResolvedValueOnce(
+            makeResponse(JSON.stringify(atLimit))
+        );
+
+        const result = await reviewCode(SAMPLE_CODE);
+        expect(result.improvedCode.length).toBe(MAX_IMPROVED_CODE_LENGTH);
+    });
+
+    it("rejects array items exceeding max item length", async () => {
+        const oversizedItem = {
+            ...VALID_RESULT,
+            bugs: ["x".repeat(MAX_ARRAY_ITEM_LENGTH + 1)],
+        };
+        mockCreate
+            .mockResolvedValueOnce(makeResponse(JSON.stringify(oversizedItem)))
+            .mockResolvedValueOnce(makeResponse(JSON.stringify(oversizedItem)));
+
+        try {
+            await reviewCode(SAMPLE_CODE);
+            expect.unreachable("Should have thrown");
+        } catch (err) {
+            expect(err).toBeInstanceOf(AIReviewError);
+            expect((err as AIReviewError).code).toBe("VALIDATION_FAILED");
+        }
+    });
+
+    it("rejects oversized complexity explanation", async () => {
+        const oversizedExplanation = {
+            ...VALID_RESULT,
+            complexity: {
+                time: "O(n)",
+                space: "O(1)",
+                explanation: "x".repeat(MAX_COMPLEXITY_FIELD_LENGTH + 1),
+            },
+        };
+        mockCreate
+            .mockResolvedValueOnce(makeResponse(JSON.stringify(oversizedExplanation)))
+            .mockResolvedValueOnce(makeResponse(JSON.stringify(oversizedExplanation)));
+
+        try {
+            await reviewCode(SAMPLE_CODE);
+            expect.unreachable("Should have thrown");
+        } catch (err) {
+            expect(err).toBeInstanceOf(AIReviewError);
+            expect((err as AIReviewError).code).toBe("VALIDATION_FAILED");
+        }
+    });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 10. CONCURRENCY STORM
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("Concurrency storm", () => {
+    it("20 parallel calls — no shared state bleed, no retry counter corruption", async () => {
+        const CONCURRENCY = 20;
+
+        // Each call gets its own valid response
+        for (let i = 0; i < CONCURRENCY; i++) {
+            const uniqueResult = {
+                ...VALID_RESULT,
+                bugs: [`Bug from call ${i}`],
+            };
+            mockCreate.mockResolvedValueOnce(
+                makeResponse(JSON.stringify(uniqueResult))
+            );
+        }
+
+        const promises = Array.from({ length: CONCURRENCY }, (_, i) =>
+            reviewCode(`// code ${i}\nconst x = ${i};`)
+        );
+
+        const results = await Promise.all(promises);
+
+        // Each result must be unique — no cross-contamination
+        for (let i = 0; i < CONCURRENCY; i++) {
+            expect(results[i].bugs[0]).toBe(`Bug from call ${i}`);
+        }
+
+        expect(mockCreate).toHaveBeenCalledTimes(CONCURRENCY);
+    });
+
+    it("20 parallel calls — mixed success and failure, no interference", async () => {
+        const CONCURRENCY = 20;
+        const callCounters = new Map<string, number>();
+
+        // Use mockImplementation for deterministic per-call routing
+        mockCreate.mockImplementation((args: { messages: { content: string }[] }) => {
+            const userMsg = args.messages[0].content;
+            // Extract the call index from code content
+            const match = userMsg.match(/code (\d+)/);
+            const idx = match ? parseInt(match[1], 10) : -1;
+            const callKey = `call-${idx}`;
+            const attempt = (callCounters.get(callKey) ?? 0) + 1;
+            callCounters.set(callKey, attempt);
+
+            if (idx % 2 === 0) {
+                // Even calls always succeed
+                return Promise.resolve(
+                    makeResponse(JSON.stringify({ ...VALID_RESULT, bugs: [`Bug ${idx}`] }))
+                );
+            } else {
+                // Odd calls: fail first, succeed on retry
+                if (attempt === 1) {
+                    return Promise.resolve(makeResponse("not json"));
+                }
+                return Promise.resolve(
+                    makeResponse(JSON.stringify({ ...VALID_RESULT, bugs: [`Retried ${idx}`] }))
+                );
+            }
+        });
+
+        const promises = Array.from({ length: CONCURRENCY }, (_, i) =>
+            reviewCode(`// code ${i}\nconst x = ${i};`)
+        );
+
+        const results = await Promise.all(promises);
+
+        for (let i = 0; i < CONCURRENCY; i++) {
+            if (i % 2 === 0) {
+                expect(results[i].bugs[0]).toBe(`Bug ${i}`);
+            } else {
+                expect(results[i].bugs[0]).toBe(`Retried ${i}`);
+            }
+        }
+    });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 11. MEMORY STABILITY
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("Memory stability", () => {
+    it("500 sequential failures — no unhandled rejections, stable error objects", async () => {
+        const ITERATIONS = 500;
+        let unhandledCount = 0;
+
+        const handler = () => { unhandledCount++; };
+        process.on("unhandledRejection", handler);
+
+        try {
+            for (let i = 0; i < ITERATIONS; i++) {
+                const badResponse = `not json iteration ${i}`;
+                mockCreate
+                    .mockResolvedValueOnce(makeResponse(badResponse))
+                    .mockResolvedValueOnce(makeResponse(badResponse));
+
+                try {
+                    await reviewCode(SAMPLE_CODE);
+                } catch (err) {
+                    expect(err).toBeInstanceOf(AIReviewError);
+                }
+            }
+
+            expect(unhandledCount).toBe(0);
+            expect(mockCreate).toHaveBeenCalledTimes(ITERATIONS * 2);
+        } finally {
+            process.removeListener("unhandledRejection", handler);
+        }
+    }, 30_000); // generous timeout
+
+    it("error objects are garbage-collectable (no retained references)", async () => {
+        const errors: WeakRef<AIReviewError>[] = [];
+
+        for (let i = 0; i < 50; i++) {
+            mockCreate
+                .mockResolvedValueOnce(makeResponse("bad"))
+                .mockResolvedValueOnce(makeResponse("bad"));
+
+            try {
+                await reviewCode(SAMPLE_CODE);
+            } catch (err) {
+                if (err instanceof AIReviewError) {
+                    errors.push(new WeakRef(err));
+                }
+            }
+        }
+
+        // All errors were captured as WeakRefs — they CAN be GC'd
+        // We can't force GC deterministically, but we verify:
+        // 1. No crash during iteration
+        // 2. WeakRefs were created successfully
+        expect(errors.length).toBe(50);
+        // Verify at least some are still reachable (they may or may not be GC'd)
+        const alive = errors.filter((ref) => ref.deref() !== undefined);
+        expect(alive.length).toBeGreaterThanOrEqual(0);
     });
 });

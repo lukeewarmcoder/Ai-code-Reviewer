@@ -29,21 +29,29 @@ const MODEL = "claude-opus-4-20250514" as const;
 const MAX_TOKENS = 16_384;
 const TEMPERATURE = 0;
 
+// ─── Response size limits (token amplification guard) ────────────────────────
+
+export const MAX_IMPROVED_CODE_LENGTH = 50_000;    // ~50 KB
+export const MAX_ARRAY_ITEM_LENGTH = 2_000;        // per-item in bugs/cleanCode/etc.
+export const MAX_COMPLEXITY_FIELD_LENGTH = 500;
+
 // ─── Zod schema — mirrors skills.md STRICT OUTPUT CONTRACT ───────────────────
 
+const boundedString = (max: number) => z.string().max(max);
+
 const ComplexitySchema = z.object({
-    time: z.string(),
-    space: z.string(),
-    explanation: z.string(),
+    time: boundedString(MAX_COMPLEXITY_FIELD_LENGTH),
+    space: boundedString(MAX_COMPLEXITY_FIELD_LENGTH),
+    explanation: boundedString(MAX_COMPLEXITY_FIELD_LENGTH),
 });
 
 const AIReviewResultSchema = z.object({
-    bugs: z.array(z.string()),
+    bugs: z.array(boundedString(MAX_ARRAY_ITEM_LENGTH)),
     complexity: ComplexitySchema,
-    cleanCode: z.array(z.string()),
-    security: z.array(z.string()),
-    optimization: z.array(z.string()),
-    improvedCode: z.string(),
+    cleanCode: z.array(boundedString(MAX_ARRAY_ITEM_LENGTH)),
+    security: z.array(boundedString(MAX_ARRAY_ITEM_LENGTH)),
+    optimization: z.array(boundedString(MAX_ARRAY_ITEM_LENGTH)),
+    improvedCode: boundedString(MAX_IMPROVED_CODE_LENGTH),
 });
 
 // ─── Public types ────────────────────────────────────────────────────────────
