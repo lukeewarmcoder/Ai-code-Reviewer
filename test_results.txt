@@ -1,0 +1,439 @@
+﻿
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mD:/ai code review[39m
+
+[90mstdout[2m | src/claude.test.ts
+[22m[39m
+≡ƒº¬ Test Suite: AIReviewResult Zod Schema
+
+  Γ£à Valid payload passes schema
+  Γ£à Missing 'bugs' field fails schema
+  Γ£à Wrong type for 'bugs' fails schema
+  Γ£à Empty arrays are valid per schema
+  Γ£à Extra keys do not cause failure
+  Γ£à Null string field fails schema
+
+≡ƒôè Results: 6 passed, 0 failed
+
+
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mHappy path[2m > [22mreturns AIReviewResult for valid JSON response[32m 5[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mHappy path[2m > [22mpasses language into user message when provided[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mHappy path[2m > [22momits language prefix when not provided[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mJSON extraction[2m > [22mstrips markdown ```json fences[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mJSON extraction[2m > [22mstrips plain ``` fences without language tag[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mJSON extraction[2m > [22mextracts JSON from prefixed commentary[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mJSON extraction[2m > [22mextracts JSON from trailing commentary[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mJSON extraction[2m > [22mextracts JSON surrounded by both prefix and suffix text[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mJSON extraction[2m > [22mhandles JSON with unicode characters[32m 1[2mms[22m[39m
+ [31m├ù[39m src/claude.spec.ts[2m > [22mMalformed AI responses[2m > [22mthrows EMPTY_RESPONSE when content array is empty[32m 14[2mms[22m[39m
+[31m   ΓåÆ expected TypeError: Cannot read properties of undeΓÇª to match object { code: 'EMPTY_RESPONSE' }[39m
+ [31m├ù[39m src/claude.spec.ts[2m > [22mMalformed AI responses[2m > [22mthrows EMPTY_RESPONSE when response has only tool_use blocks[32m 3[2mms[22m[39m
+[31m   ΓåÆ expected TypeError: Cannot read properties of undeΓÇª to match object { code: 'EMPTY_RESPONSE' }[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mMalformed AI responses[2m > [22mhandles HTML response ΓÇö retries then fails[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mMalformed AI responses[2m > [22mhandles plain text response ΓÇö retries then fails[32m 0[2mms[22m[39m
+ [31m├ù[39m src/claude.spec.ts[2m > [22mMalformed AI responses[2m > [22mhandles double-encoded JSON string ΓÇö retries then fails[32m 2[2mms[22m[39m
+[31m   ΓåÆ expected AIReviewError: Claude response is not valΓÇª { ΓÇª(2) } to match object { code: 'VALIDATION_FAILED' }
+(2 matching properties omitted from actual)[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mZod validation failures[2m > [22mrejects missing required field (no 'bugs' key)[32m 2[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mZod validation failures[2m > [22mrejects wrong type (bugs as string instead of array)[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mZod validation failures[2m > [22mrejects null improvedCode[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mZod validation failures[2m > [22mrejects missing nested complexity fields[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mZod validation failures[2m > [22mrejects array with non-string items[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mZod validation failures[2m > [22mrejects completely wrong schema[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mZod validation failures[2m > [22mincludes Zod path details in error message[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mRetry logic[2m > [22mretries once and succeeds on second attempt[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mRetry logic[2m > [22mretry message includes the bad assistant output[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mRetry logic[2m > [22mretry message includes schema correction instructions[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mRetry logic[2m > [22mdoes NOT retry more than once ΓÇö fails after two attempts[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mRetry logic[2m > [22mfirst attempt valid JSON but wrong schema ΓåÆ retry fixes it[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mRetry logic[2m > [22mtruncated JSON on first attempt, valid on retry[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mInput validation[2m > [22mthrows API_ERROR for empty string[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mInput validation[2m > [22mthrows API_ERROR for whitespace-only string[32m 0[2mms[22m[39m
+ [31m├ù[39m src/claude.spec.ts[2m > [22mAPI errors[2m > [22mwraps Anthropic SDK errors as API_ERROR[32m 3[2mms[22m[39m
+[31m   ΓåÆ expected [Function] to throw error matching /Anthropic API call failed/ but got 'Cannot read properties of undefined (ΓÇª'[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mAPI errors[2m > [22mwraps non-Error throws from SDK[32m 0[2mms[22m[39m
+ [31m├ù[39m src/claude.spec.ts[2m > [22mAPI errors[2m > [22mwraps retry API failure as API_ERROR[32m 1[2mms[22m[39m
+[31m   ΓåÆ expected [Function] to throw error matching /retry call failed/ but got 'Cannot read properties of undefined (ΓÇª'[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mAIReviewError[2m > [22mhas correct name, code, and message[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mAIReviewError[2m > [22mtoJSON returns structured error object[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mAIReviewError[2m > [22mis instanceof Error[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m src/claude.spec.ts[2m > [22mAIReviewError[2m > [22mraw is undefined when not provided[32m 0[2mms[22m[39m
+node.exe : 
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (:String) [],    
+ RemoteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+[31mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+[39m[1m[41m Failed 
+Suites 1 [49m[22m[31
+mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+[39m
+
+[41m[1m FAIL 
+[22m[49m 
+src/claude.test.ts[2m 
+[ src/claude.test.ts 
+][22m
+[31m[1mError[22m: 
+process.exit 
+unexpectedly called 
+with "0"[39m
+[36m [2mΓ¥»[22m src/
+claude.test.ts:[2m96:9
+[22m[39m
+    [90m 94| [39m
+    [90m 95| [39mcons
+ole[33m.[39m[34mlog
+[39m([32m`\n≡ƒôè 
+Results: [39m[36m${[
+39mpassed[36m}[39m[3
+2m passed, [39m[36m${
+[39mfailed[36m}[39m
+[32m failed\n`[39m)[3
+3m;[39m
+    [90m 96| [39mproc
+ess[33m.[39m[34mexit
+[39m(failed 
+[33m>[39m 
+[34m0[39m 
+[33m?[39m 
+[34m1[39m 
+[33m:[39m 
+[34m0[39m)[33m;[39m
+    [90m   | [39m    
+    [31m^[39m
+    [90m 97| [39m
+
+[31m[2mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ
+»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»Γ
+Ä»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»[1/6]ΓÄ»[2
+2m[39m
+
+
+[31mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+ΓÄ»[39m[1m[41m 
+Failed Tests 5 [49m[2
+2m[31mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»Γ
+Ä»ΓÄ»[39m
+
+[41m[1m FAIL 
+[22m[49m 
+src/claude.spec.ts[2m 
+> [22mMalformed AI 
+responses[2m > 
+[22mthrows 
+EMPTY_RESPONSE when 
+content array is empty
+[31m[1mAssertionError
+[22m: expected 
+TypeError: Cannot read 
+properties of undeΓÇª 
+to match object { 
+code: 'EMPTY_RESPONSE' 
+}[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- {[39m
+[32m-   "code": 
+"EMPTY_RESPONSE",[39m
+[31m+ TypeError {[39m
+[31m+   "message": 
+"Cannot read 
+properties of 
+undefined (reading 
+'content')",[39m
+[2m  }[22m
+
+[36m [2mΓ¥»[22m src/
+claude.spec.ts:[2m198:
+9[22m[39m
+    [90m196| [39m
+    [90m197| [39m    
+    await expect(review
+Code(SAMPLE_CODE)).reje
+cts.toThrow(AIReviewΓÇª
+    [90m198| [39m    
+    [35mawait[39m [3
+4mexpect[39m([34mrevi
+ewCode[39m([33mSAMPLE
+_CODE[39m))[33m.[39m
+rejects[33m.[39m[34m
+toMatchObject[39m({
+    [90m   | [39m    
+    [31m^[39m
+    [90m199| [39m    
+        
+code[33m:[39m [32m"E
+MPTY_RESPONSE"[39m[33
+m,[39m
+    [90m200| [39m    
+    })[33m;[39m
+
+[31m[2mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ
+»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»Γ
+Ä»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»[2/6]ΓÄ»[2
+2m[39m
+
+[41m[1m FAIL 
+[22m[49m 
+src/claude.spec.ts[2m 
+> [22mMalformed AI 
+responses[2m > 
+[22mthrows 
+EMPTY_RESPONSE when 
+response has only 
+tool_use blocks
+[31m[1mAssertionError
+[22m: expected 
+TypeError: Cannot read 
+properties of undeΓÇª 
+to match object { 
+code: 'EMPTY_RESPONSE' 
+}[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- {[39m
+[32m-   "code": 
+"EMPTY_RESPONSE",[39m
+[31m+ TypeError {[39m
+[31m+   "message": 
+"Cannot read 
+properties of 
+undefined (reading 
+'content')",[39m
+[2m  }[22m
+
+[36m [2mΓ¥»[22m src/
+claude.spec.ts:[2m207:
+9[22m[39m
+    [90m205| [39m
+    [90m206| [39m    
+    await expect(review
+Code(SAMPLE_CODE)).reje
+cts.toThrow(AIReviewΓÇª
+    [90m207| [39m    
+    [35mawait[39m [3
+4mexpect[39m([34mrevi
+ewCode[39m([33mSAMPLE
+_CODE[39m))[33m.[39m
+rejects[33m.[39m[34m
+toMatchObject[39m({
+    [90m   | [39m    
+    [31m^[39m
+    [90m208| [39m    
+        
+code[33m:[39m [32m"E
+MPTY_RESPONSE"[39m[33
+m,[39m
+    [90m209| [39m    
+    })[33m;[39m
+
+[31m[2mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ
+»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»Γ
+Ä»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»[3/6]ΓÄ»[2
+2m[39m
+
+[41m[1m FAIL 
+[22m[49m 
+src/claude.spec.ts[2m 
+> [22mMalformed AI 
+responses[2m > 
+[22mhandles 
+double-encoded JSON 
+string ΓÇö retries 
+then fails
+[31m[1mAssertionError
+[22m: expected 
+AIReviewError: Claude 
+response is not valΓÇª 
+{ ΓÇª(2) } to match 
+object { code: 
+'VALIDATION_FAILED' }
+(2 matching properties 
+omitted from 
+actual)[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- {[39m
+[32m-   "code": "VALID
+ATION_FAILED",[39m
+[31m+ AIReviewError 
+{[39m
+[31m+   "code": "JSON_
+PARSE_ERROR",[39m
+[2m  }[22m
+
+[36m [2mΓ¥»[22m src/
+claude.spec.ts:[2m238:
+9[22m[39m
+    [90m236| [39m    
+        [33m.[39m[34
+mmockResolvedValueOnce
+[39m([34mmakeResponse
+[39m(doubleEncoded))[3
+3m;[39m
+    [90m237| [39m
+    [90m238| [39m    
+    [35mawait[39m [3
+4mexpect[39m([34mrevi
+ewCode[39m([33mSAMPLE
+_CODE[39m))[33m.[39m
+rejects[33m.[39m[34m
+toMatchObject[39m({
+    [90m   | [39m    
+    [31m^[39m
+    [90m239| [39m    
+        
+code[33m:[39m [32m"V
+ALIDATION_FAILED"[39m
+[33m,[39m
+    [90m240| [39m    
+    })[33m;[39m
+
+[31m[2mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ
+»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»Γ
+Ä»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»[4/6]ΓÄ»[2
+2m[39m
+
+[41m[1m FAIL 
+[22m[49m 
+src/claude.spec.ts[2m 
+> [22mAPI errors[2m 
+> [22mwraps Anthropic 
+SDK errors as API_ERROR
+[31m[1mAssertionError
+[22m: expected 
+[Function] to throw 
+error matching 
+/Anthropic API call 
+failed/ but got 
+'Cannot read 
+properties of 
+undefined (ΓÇª'[39m
+
+[32m- Expected:[39m 
+/Anthropic API call 
+failed/
+
+[31m+ Received:[39m 
+"Cannot read 
+properties of 
+undefined (reading 
+'content')"
+
+[36m [2mΓ¥»[22m src/
+claude.spec.ts:[2m453:
+9[22m[39m
+    [90m451| [39m    
+        
+code[33m:[39m [32m"A
+PI_ERROR"[39m[33m,[3
+9m
+    [90m452| [39m    
+    })[33m;[39m
+    [90m453| [39m    
+    [35mawait[39m 
+[34mexpect[39m(
+    [90m   | [39m    
+    [31m^[39m
+    [90m454| [39m    
+        [34mreviewCode
+[39m([33mSAMPLE_CODE
+[39m)
+    [90m455| [39m    
+    )[33m.[39mrejects
+[33m.[39m[34mtoThrow
+[39m([36m/Anthropic 
+API call failed/[39m)
+[33m;[39m
+
+[31m[2mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ
+»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»Γ
+Ä»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»[5/6]ΓÄ»[2
+2m[39m
+
+[41m[1m FAIL 
+[22m[49m 
+src/claude.spec.ts[2m 
+> [22mAPI errors[2m 
+> [22mwraps retry API 
+failure as API_ERROR
+[31m[1mAssertionError
+[22m: expected 
+[Function] to throw 
+error matching /retry 
+call failed/ but got 
+'Cannot read 
+properties of 
+undefined (ΓÇª'[39m
+
+[32m- Expected:[39m 
+/retry call failed/
+
+[31m+ Received:[39m 
+"Cannot read 
+properties of 
+undefined (reading 
+'content')"
+
+[36m [2mΓ¥»[22m src/
+claude.spec.ts:[2m475:
+9[22m[39m
+    [90m473| [39m    
+        
+code[33m:[39m [32m"A
+PI_ERROR"[39m[33m,[3
+9m
+    [90m474| [39m    
+    })[33m;[39m
+    [90m475| [39m    
+    [35mawait[39m [3
+4mexpect[39m([34mrevi
+ewCode[39m([33mSAMPLE
+_CODE[39m))[33m.[39m
+rejects[33m.[39m[34m
+toThrow[39m(
+    [90m   | [39m    
+    [31m^[39m
+    [90m476| [39m    
+        [36m/retry 
+call failed/[39m
+    [90m477| [39m    
+    )[33m;[39m
+
+[31m[2mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ
+»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»Γ
+Ä»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»[6/6]ΓÄ»[2
+2m[39m
+
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m31 passed[39m[22m[90m (36)[39m
+[2m   Start at [22m 11:55:06
+[2m   Duration [22m 911ms[2m (transform 673ms, setup 0ms, import 468ms, tests 45ms, environment 0ms)[22m
+
