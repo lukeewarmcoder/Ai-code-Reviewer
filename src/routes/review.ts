@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import { randomUUID } from "node:crypto";
 import { ReviewRequestSchema } from "../validation.js";
 import { defaultLimiter } from "../rateLimit.js";
 import { logReviewCost, logReviewError, logRateLimit } from "../logger.js";
@@ -62,6 +63,7 @@ reviewRouter.all("/", (req: Request, res: Response, next) => {
 reviewRouter.post("/", async (req: Request, res: Response): Promise<void> => {
     const clientIp = getClientIp(req);
     const startTime = Date.now();
+    const requestId = randomUUID();
 
     // ── Step 1: Input validation ─────────────────────────────────────────────
 
@@ -86,7 +88,7 @@ reviewRouter.post("/", async (req: Request, res: Response): Promise<void> => {
     if (!rateResult.allowed) {
         const retryAfterSeconds = Math.ceil(rateResult.retryAfterMs / 1000);
 
-        logRateLimit({ clientIp, retryAfterMs: rateResult.retryAfterMs });
+        logRateLimit({ requestId, clientIp, retryAfterMs: rateResult.retryAfterMs });
 
         errorResponse(
             res,
@@ -126,7 +128,7 @@ reviewRouter.post("/", async (req: Request, res: Response): Promise<void> => {
             };
 
             // Log full error server-side (including raw if present)
-            logReviewError({ errorCode: err.code, clientIp });
+            logReviewError({ requestId, errorCode: err.code, clientIp, durationMs });
 
             // NEVER send err.raw to client
             errorResponse(res, mapping.status, mapping.clientCode, err.message);
@@ -134,7 +136,7 @@ reviewRouter.post("/", async (req: Request, res: Response): Promise<void> => {
         }
 
         // Unexpected error — never expose internals
-        logReviewError({ errorCode: "UNEXPECTED", clientIp });
+        logReviewError({ requestId, errorCode: "UNEXPECTED", clientIp, durationMs });
 
         errorResponse(
             res,

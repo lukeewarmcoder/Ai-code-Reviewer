@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { ReviewRequestSchema } from "../validation.js";
 import { defaultLimiter } from "../rateLimit.js";
 import { reviewCode, AIReviewError } from "../claude.js";
+import { logReviewCost, logReviewError, logRateLimit } from "../logger.js";
 
 // ─── Client-facing error messages (never expose internals) ──────────────────
 
@@ -56,7 +57,10 @@ export async function handleReviewRequest(
     input: unknown,
     clientIp: string
 ): Promise<ReviewHttpResponse> {
+    const startTime = performance.now();
     const requestId = randomUUID();
+    const rateKey = clientIp || "anonymous";
+
     const baseHeaders: Record<string, string> = {
         "X-Request-Id": requestId,
         "Content-Type": "application/json",
@@ -74,7 +78,6 @@ export async function handleReviewRequest(
 
     // ── 2. Rate limit check ──────────────────────────────────────────────────
 
-    const rateKey = clientIp || "anonymous";
     const rateResult = defaultLimiter.check(rateKey);
 
     const rateLimitHeaders: Record<string, string> = {
@@ -85,6 +88,12 @@ export async function handleReviewRequest(
 
     if (!rateResult.allowed) {
         const retryAfterSeconds = Math.ceil(rateResult.retryAfterMs / 1000);
+
+        logRateLimit({
+            requestId,
+            clientIp: rateKey,
+            retryAfterMs: rateResult.retryAfterMs,
+        });
 
         return failure(
             429,
@@ -101,13 +110,31 @@ export async function handleReviewRequest(
 
     try {
         const result = await reviewCode(code, language);
+        const durationMs = Math.round(performance.now() - startTime);
+
+        logReviewCost({
+            inputTokens: Math.ceil(code.length / 4),
+            outputTokens: Math.ceil(JSON.stringify(result).length / 4),
+            clientIp: rateKey,
+            durationMs,
+        });
+
         return success(result, rateLimitHeaders);
     } catch (err: unknown) {
+        const durationMs = Math.round(performance.now() - startTime);
+
         if (err instanceof AIReviewError) {
             const mapping = AI_ERROR_MAP[err.code] ?? {
                 status: 500,
                 clientCode: "INTERNAL_ERROR",
             };
+
+            logReviewError({
+                requestId,
+                errorCode: err.code,
+                clientIp: rateKey,
+                durationMs,
+            });
 
             return failure(
                 mapping.status,
@@ -116,6 +143,13 @@ export async function handleReviewRequest(
                 rateLimitHeaders
             );
         }
+
+        logReviewError({
+            requestId,
+            errorCode: "UNEXPECTED",
+            clientIp: rateKey,
+            durationMs,
+        });
 
         return failure(
             500,

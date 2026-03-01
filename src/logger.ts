@@ -12,13 +12,16 @@ export interface ReviewCostLog {
 
 export interface ReviewErrorLog {
     event: "review_error";
+    requestId: string;
     errorCode: string;
     clientIp: string;
+    durationMs: number;
     timestamp: string;
 }
 
 export interface RateLimitLog {
     event: "rate_limit_hit";
+    requestId: string;
     clientIp: string;
     retryAfterMs: number;
     timestamp: string;
