@@ -383,8 +383,11 @@ describe("Retry logic", () => {
             (m: { role: string }) => m.role === "user"
         );
         const correctionMsg = lastUserMsg[lastUserMsg.length - 1];
-        expect(correctionMsg.content).toContain("not valid JSON");
-        expect(correctionMsg.content).toContain("schema");
+        expect(correctionMsg.content).toContain("invalid or malformed JSON");
+        expect(correctionMsg.content).toContain('"time": string');
+        expect(correctionMsg.content).toContain('"space": string');
+        expect(correctionMsg.content).toContain('"explanation": string');
+        expect(correctionMsg.content).toContain("No markdown. No commentary.");
     });
 
     it("does NOT retry more than once — fails after two attempts", async () => {
@@ -419,6 +422,119 @@ describe("Retry logic", () => {
 
         expect(result).toEqual(VALID_RESULT);
         expect(mockCreate).toHaveBeenCalledTimes(2);
+    });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 5b. FULL FAILURE CHAIN
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("Full failure chain", () => {
+    it("markdown-wrapped first → wrong-type retry → proper AIReviewError with raw", async () => {
+        // First response: markdown-wrapped (triggers extractJSON fence strip → valid JSON parse → Zod passes... wait no)
+        // Actually: markdown-wrapped with WRONG TYPES to ensure both attempts fail
+        const wrongTypesPayload = {
+            bugs: 42,                         // should be string[]
+            complexity: { time: "O(n)" },     // missing space + explanation
+            cleanCode: null,                  // should be string[]
+            security: [],
+            optimization: [],
+            improvedCode: 123,                // should be string
+        };
+        const markdownWrapped = "```json\n" + JSON.stringify(wrongTypesPayload) + "\n```";
+
+        // Retry: correct structure but wrong types (different failure)
+        const wrongTypesRetry = {
+            bugs: ["valid bug"],
+            complexity: {
+                time: 100,          // should be string
+                space: "O(1)",
+                explanation: "ok",
+            },
+            cleanCode: [],
+            security: [],
+            optimization: [],
+            improvedCode: "",
+        };
+        const retryResponse = JSON.stringify(wrongTypesRetry);
+
+        mockCreate
+            .mockResolvedValueOnce(makeResponse(markdownWrapped))
+            .mockResolvedValueOnce(makeResponse(retryResponse));
+
+        try {
+            await reviewCode(SAMPLE_CODE);
+            expect.unreachable("Should have thrown");
+        } catch (err) {
+            // 1. Must be AIReviewError
+            expect(err).toBeInstanceOf(AIReviewError);
+            const reviewErr = err as AIReviewError;
+
+            // 2. Must have VALIDATION_FAILED code
+            expect(reviewErr.code).toBe("VALIDATION_FAILED");
+
+            // 3. Must preserve raw output for debugging
+            expect(reviewErr.raw).toBeDefined();
+            expect(reviewErr.raw!.length).toBeGreaterThan(0);
+
+            // 4. Raw must contain the retry response (not the first)
+            expect(reviewErr.raw).toContain('"time":100');
+
+            // 5. Error message must reference the failing field
+            expect(reviewErr.message).toContain("Zod validation failed");
+
+            // 6. Must NOT leak system prompt
+            expect(reviewErr.message).not.toContain("Senior Software Engineer");
+            expect(reviewErr.message).not.toContain("STRICT PROHIBITIONS");
+            expect(reviewErr.raw).not.toContain("Senior Software Engineer");
+
+            // 7. toJSON must be serializable
+            const json = reviewErr.toJSON();
+            expect(json.error).toBe(true);
+            expect(json.code).toBe("VALIDATION_FAILED");
+            expect(() => JSON.stringify(json)).not.toThrow();
+        }
+
+        // 8. Must have called API exactly twice (one attempt + one retry)
+        expect(mockCreate).toHaveBeenCalledTimes(2);
+    });
+
+    it("plain text first → malformed JSON retry → JSON_PARSE_ERROR with raw", async () => {
+        const plainText = "I'm sorry, I cannot review this code.";
+        const garbledRetry = "{bugs: [missing quotes], not valid}";
+
+        mockCreate
+            .mockResolvedValueOnce(makeResponse(plainText))
+            .mockResolvedValueOnce(makeResponse(garbledRetry));
+
+        try {
+            await reviewCode(SAMPLE_CODE);
+            expect.unreachable("Should have thrown");
+        } catch (err) {
+            const reviewErr = err as AIReviewError;
+            expect(reviewErr.code).toBe("JSON_PARSE_ERROR");
+            expect(reviewErr.raw).toBeDefined();
+            expect(reviewErr.message).not.toContain("Senior Software Engineer");
+        }
+    });
+
+    it("error.toJSON never includes raw field (no internal leakage)", async () => {
+        const bad = "not json at all";
+        mockCreate
+            .mockResolvedValueOnce(makeResponse(bad))
+            .mockResolvedValueOnce(makeResponse(bad));
+
+        try {
+            await reviewCode(SAMPLE_CODE);
+            expect.unreachable("Should have thrown");
+        } catch (err) {
+            const reviewErr = err as AIReviewError;
+            const json = reviewErr.toJSON();
+
+            // toJSON intentionally omits 'raw' — safe to send to clients
+            expect(json).not.toHaveProperty("raw");
+            expect(Object.keys(json)).toEqual(["error", "code", "message"]);
+        }
     });
 });
 
