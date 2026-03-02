@@ -38,14 +38,14 @@ export function createAuthRepository(db: AppDatabase) {
 
         /**
          * Validate a raw API key using constant-time comparison.
-         * Returns true if the key exists and is active.
+         * Returns the key ID if valid and active, null otherwise.
          */
-        validateApiKey(rawKey: string): boolean {
+        validateApiKey(rawKey: string): string | null {
             const candidateHash = hashKey(rawKey);
 
-            // Fetch all active key hashes
+            // Fetch all active key hashes + IDs
             const rows = db
-                .select({ keyHash: apiKeys.keyHash })
+                .select({ id: apiKeys.id, keyHash: apiKeys.keyHash })
                 .from(apiKeys)
                 .where(eq(apiKeys.active, 1))
                 .all();
@@ -59,11 +59,11 @@ export function createAuthRepository(db: AppDatabase) {
                     candidateBuffer.length === storedBuffer.length &&
                     timingSafeEqual(candidateBuffer, storedBuffer)
                 ) {
-                    return true;
+                    return row.id;
                 }
             }
 
-            return false;
+            return null;
         },
 
         /**

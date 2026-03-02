@@ -56,11 +56,12 @@ function failure(
 
 export async function handleReviewRequest(
     input: unknown,
-    clientIp: string
+    clientIp: string,
+    apiKeyId: string
 ): Promise<ReviewHttpResponse> {
     const startTime = performance.now();
     const requestId = randomUUID();
-    const rateKey = clientIp || "anonymous";
+    const rateKey = apiKeyId || clientIp || "anonymous";
 
     const baseHeaders: Record<string, string> = {
         "X-Request-Id": requestId,

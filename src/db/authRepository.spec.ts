@@ -82,37 +82,37 @@ describe("createApiKey", () => {
 describe("validateApiKey", () => {
     beforeEach(freshDb);
 
-    it("returns true for a valid active key", () => {
+    it("returns key ID for a valid active key", () => {
         const auth = createAuthRepository(db);
-        const { rawKey } = auth.createApiKey("valid-key");
+        const { id, rawKey } = auth.createApiKey("valid-key");
 
-        expect(auth.validateApiKey(rawKey)).toBe(true);
+        expect(auth.validateApiKey(rawKey)).toBe(id);
     });
 
-    it("returns false for a random string", () => {
+    it("returns null for a random string", () => {
         const auth = createAuthRepository(db);
         auth.createApiKey("test-key");
 
-        expect(auth.validateApiKey("not-a-real-key")).toBe(false);
+        expect(auth.validateApiKey("not-a-real-key")).toBeNull();
     });
 
-    it("returns false for empty string", () => {
+    it("returns null for empty string", () => {
         const auth = createAuthRepository(db);
-        expect(auth.validateApiKey("")).toBe(false);
+        expect(auth.validateApiKey("")).toBeNull();
     });
 
-    it("returns false when no keys exist", () => {
+    it("returns null when no keys exist", () => {
         const auth = createAuthRepository(db);
-        expect(auth.validateApiKey("anything")).toBe(false);
+        expect(auth.validateApiKey("anything")).toBeNull();
     });
 
-    it("returns false for a revoked key", () => {
+    it("returns null for a revoked key", () => {
         const auth = createAuthRepository(db);
         const { id, rawKey } = auth.createApiKey("revoked-key");
 
         auth.revokeApiKey(id);
 
-        expect(auth.validateApiKey(rawKey)).toBe(false);
+        expect(auth.validateApiKey(rawKey)).toBeNull();
     });
 
     it("validates correct key among multiple keys", () => {
@@ -121,10 +121,10 @@ describe("validateApiKey", () => {
         const k2 = auth.createApiKey("key-2");
         const k3 = auth.createApiKey("key-3");
 
-        expect(auth.validateApiKey(k1.rawKey)).toBe(true);
-        expect(auth.validateApiKey(k2.rawKey)).toBe(true);
-        expect(auth.validateApiKey(k3.rawKey)).toBe(true);
-        expect(auth.validateApiKey("wrong-key")).toBe(false);
+        expect(auth.validateApiKey(k1.rawKey)).toBe(k1.id);
+        expect(auth.validateApiKey(k2.rawKey)).toBe(k2.id);
+        expect(auth.validateApiKey(k3.rawKey)).toBe(k3.id);
+        expect(auth.validateApiKey("wrong-key")).toBeNull();
     });
 
     it("rejects key with single character difference", () => {
@@ -136,7 +136,7 @@ describe("validateApiKey", () => {
         const flipped = lastChar === "a" ? "b" : "a";
         const tamperedKey = rawKey.slice(0, -1) + flipped;
 
-        expect(auth.validateApiKey(tamperedKey)).toBe(false);
+        expect(auth.validateApiKey(tamperedKey)).toBeNull();
     });
 });
 
@@ -164,7 +164,7 @@ describe("revokeApiKey", () => {
 
         auth.revokeApiKey(k2.id);
 
-        expect(auth.validateApiKey(k1.rawKey)).toBe(true);
-        expect(auth.validateApiKey(k2.rawKey)).toBe(false);
+        expect(auth.validateApiKey(k1.rawKey)).toBe(k1.id);
+        expect(auth.validateApiKey(k2.rawKey)).toBeNull();
     });
 });
