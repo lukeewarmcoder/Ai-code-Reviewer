@@ -19,6 +19,10 @@ vi.mock("../rateLimit.js", () => ({
     defaultLimiter: { check: mockCheck },
 }));
 
+vi.mock("../middleware/auth.js", () => ({
+    requireApiKey: (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
+
 // Set API key for the AI engine
 process.env.ANTHROPIC_API_KEY = "sk-ant-test-key";
 

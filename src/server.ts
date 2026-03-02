@@ -1,6 +1,7 @@
 import express from "express";
 import { reviewRouter } from "./routes/review.js";
 import { handleAdminStatsRequest } from "./handlers/adminHandler.js";
+import { requireApiKey } from "./middleware/auth.js";
 import type { ReviewHttpResponse } from "./handlers/reviewHandler.js";
 import "dotenv/config";
 
@@ -47,9 +48,9 @@ app.use((err: unknown, _req: express.Request, res: express.Response, next: expre
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
-app.use("/api/review", reviewRouter);
+app.use("/api/review", requireApiKey, reviewRouter);
 
-app.get("/api/admin/stats", (_req, res) => {
+app.get("/api/admin/stats", requireApiKey, (_req, res) => {
     sendHttpResponse(res, handleAdminStatsRequest());
 });
 

@@ -27,3 +27,13 @@ export const usageLogs = sqliteTable("usage_logs", {
     durationMs: integer("duration_ms").notNull(),
     createdAt: integer("created_at").notNull(),                // epoch ms
 });
+
+// ─── api_keys ────────────────────────────────────────────────────────────────
+
+export const apiKeys = sqliteTable("api_keys", {
+    id: text("id").primaryKey(),                           // UUID
+    name: text("name").notNull(),
+    keyHash: text("key_hash").notNull(),                        // SHA-256 of raw key
+    active: integer("active").notNull().default(1),            // 1 = active, 0 = revoked
+    createdAt: integer("created_at").notNull(),                   // epoch ms
+});
