@@ -1,6 +1,19 @@
 import express from "express";
 import { reviewRouter } from "./routes/review.js";
+import { handleAdminStatsRequest } from "./handlers/adminHandler.js";
+import type { ReviewHttpResponse } from "./handlers/reviewHandler.js";
 import "dotenv/config";
+
+// ─── Handler adapter ─────────────────────────────────────────────────────────
+
+function sendHttpResponse(res: express.Response, result: ReviewHttpResponse): void {
+    if (result.headers) {
+        for (const [key, value] of Object.entries(result.headers)) {
+            res.setHeader(key, value);
+        }
+    }
+    res.status(result.status).json(result.body);
+}
 
 // ─── App ─────────────────────────────────────────────────────────────────────
 
@@ -36,6 +49,10 @@ app.use((err: unknown, _req: express.Request, res: express.Response, next: expre
 
 app.use("/api/review", reviewRouter);
 
+app.get("/api/admin/stats", (_req, res) => {
+    sendHttpResponse(res, handleAdminStatsRequest());
+});
+
 // ─── Health check ────────────────────────────────────────────────────────────
 
 app.get("/health", (_req, res) => {
@@ -65,6 +82,7 @@ if (isMainModule) {
     const server = app.listen(PORT, () => {
         console.log(`🚀 AI Code Review API listening on http://localhost:${PORT}`);
         console.log(`   POST /api/review`);
+        console.log(`   GET  /api/admin/stats`);
         console.log(`   GET  /health`);
     });
 
