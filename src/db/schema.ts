@@ -34,6 +34,36 @@ export const apiKeys = sqliteTable("api_keys", {
     id: text("id").primaryKey(),                           // UUID
     name: text("name").notNull(),
     keyHash: text("key_hash").notNull(),                        // SHA-256 of raw key
+    plan: text("plan").notNull().default("FREE"),            // FREE | PRO
     active: integer("active").notNull().default(1),            // 1 = active, 0 = revoked
     createdAt: integer("created_at").notNull(),                   // epoch ms
+});
+
+// ─── users (NextAuth) ────────────────────────────────────────────────────────
+
+export const users = sqliteTable("users", {
+    id: text("id").primaryKey(),
+    name: text("name"),
+    email: text("email").notNull().unique(),
+    emailVerified: integer("email_verified"),                   // epoch ms or null
+    image: text("image"),
+    plan: text("plan").notNull().default("FREE"),              // FREE | PRO
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeSubscriptionId: text("stripe_subscription_id"),
+});
+
+// ─── accounts (NextAuth OAuth) ───────────────────────────────────────────────
+
+export const accounts = sqliteTable("accounts", {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
 });

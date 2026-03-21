@@ -1,7 +1,8 @@
 import { randomUUID, randomBytes, createHash, timingSafeEqual } from "node:crypto";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { apiKeys } from "./schema.js";
 import type { AppDatabase } from "./index.js";
+import type { PlanName } from "../config/plans.js";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ export function createAuthRepository(db: AppDatabase) {
          * Returns the raw key (show to user ONCE) and the stored record ID.
          * The raw key is never stored — only its SHA-256 hash.
          */
-        createApiKey(name: string): { id: string; rawKey: string } {
+        createApiKey(name: string, plan: PlanName = "FREE"): { id: string; rawKey: string } {
             const id = randomUUID();
             const rawKey = randomBytes(32).toString("hex");
             const keyHash = hashKey(rawKey);
@@ -28,6 +29,7 @@ export function createAuthRepository(db: AppDatabase) {
                     id,
                     name,
                     keyHash,
+                    plan,
                     active: 1,
                     createdAt: Date.now(),
                 })
@@ -38,14 +40,14 @@ export function createAuthRepository(db: AppDatabase) {
 
         /**
          * Validate a raw API key using constant-time comparison.
-         * Returns the key ID if valid and active, null otherwise.
+         * Returns { id, plan } if valid and active, null otherwise.
          */
-        validateApiKey(rawKey: string): string | null {
+        validateApiKey(rawKey: string): { id: string; plan: PlanName } | null {
             const candidateHash = hashKey(rawKey);
 
-            // Fetch all active key hashes + IDs
+            // Fetch all active key hashes + IDs + plans
             const rows = db
-                .select({ id: apiKeys.id, keyHash: apiKeys.keyHash })
+                .select({ id: apiKeys.id, keyHash: apiKeys.keyHash, plan: apiKeys.plan })
                 .from(apiKeys)
                 .where(eq(apiKeys.active, 1))
                 .all();
@@ -59,7 +61,7 @@ export function createAuthRepository(db: AppDatabase) {
                     candidateBuffer.length === storedBuffer.length &&
                     timingSafeEqual(candidateBuffer, storedBuffer)
                 ) {
-                    return row.id;
+                    return { id: row.id, plan: row.plan as PlanName };
                 }
             }
 

@@ -1,5 +1,5 @@
 import { getDb } from "./index.js";
-import { createReviewRepository } from "./reviewRepository.js";
+import { createReviewRepository, hashCode } from "./reviewRepository.js";
 import type { ReviewRecord } from "./reviewRepository.js";
 
 // ─── Persistence facade ──────────────────────────────────────────────────────
@@ -45,5 +45,20 @@ export function recordReview(record: ReviewRecord): PersistenceResult {
         const message =
             err instanceof Error ? err.message : "Unknown persistence error";
         return { ok: false, error: message };
+    }
+}
+
+export function getCachedReview(code: string, language?: string, level?: string): unknown | null {
+    try {
+        const db = getDb();
+        const repo = createReviewRepository(db);
+        const hash = hashCode(code, language, level);
+        const record = repo.getSuccessfulReviewByHash(hash);
+        if (record && record.result) {
+            return JSON.parse(record.result);
+        }
+        return null;
+    } catch {
+        return null;
     }
 }

@@ -97,7 +97,7 @@ describe("reviewRepository", () => {
         expect(row).not.toBeNull();
         expect(row!.id).toBe("req-001");
         expect(row!.clientIp).toBe("127.0.0.1");
-        expect(row!.codeHash).toBe(hashCode(SAMPLE_CODE));
+        expect(row!.codeHash).toBe(hashCode(SAMPLE_CODE, "javascript"));
         expect(row!.codeLength).toBe(SAMPLE_CODE.length);
         expect(row!.language).toBe("javascript");
         expect(row!.status).toBe("success");

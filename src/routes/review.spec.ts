@@ -31,6 +31,7 @@ import { app } from "../server.js";
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const VALID_RESULT = {
+    qualityScore: 95,
     bugs: ["Off-by-one error"],
     complexity: { time: "O(n)", space: "O(1)", explanation: "Linear scan." },
     cleanCode: ["Use const instead of let"],
@@ -242,7 +243,9 @@ describe("Happy path", () => {
 
 describe("AI error handling", () => {
     it("returns 502 with AI_UNAVAILABLE on API_ERROR", async () => {
-        mockCreate.mockRejectedValueOnce(new Error("Connection refused"));
+        mockCreate
+            .mockRejectedValueOnce(new Error("Connection refused"))
+            .mockRejectedValueOnce(new Error("Connection refused"));
 
         const res = await request(app)
             .post("/api/review")

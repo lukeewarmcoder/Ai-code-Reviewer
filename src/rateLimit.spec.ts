@@ -108,3 +108,57 @@ describe("RateLimiter", () => {
         expect(limiter.check("user2").allowed).toBe(true);
     });
 });
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Plan-based rate limiting (maxOverride)
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("plan-based rate limiting", () => {
+    let limiter: RateLimiter;
+
+    beforeEach(() => {
+        limiter = new RateLimiter({ windowMs: 10_000, maxRequests: 5 });
+    });
+
+    it("FREE plan caps at 5 requests", () => {
+        for (let i = 0; i < 5; i++) {
+            expect(limiter.check("free-key", 5).allowed).toBe(true);
+        }
+        expect(limiter.check("free-key", 5).allowed).toBe(false);
+    });
+
+    it("PRO plan caps at 100 requests", () => {
+        for (let i = 0; i < 100; i++) {
+            expect(limiter.check("pro-key", 100).allowed).toBe(true);
+        }
+        expect(limiter.check("pro-key", 100).allowed).toBe(false);
+    });
+
+    it("maxOverride overrides instance default", () => {
+        // Instance default is 5, but override to 2
+        expect(limiter.check("override-key", 2).allowed).toBe(true);
+        expect(limiter.check("override-key", 2).allowed).toBe(true);
+        expect(limiter.check("override-key", 2).allowed).toBe(false);
+    });
+
+    it("separate buckets per key with different limits", () => {
+        // Fill up free key
+        for (let i = 0; i < 5; i++) {
+            limiter.check("free-key", 5);
+        }
+        expect(limiter.check("free-key", 5).allowed).toBe(false);
+
+        // Pro key on same limiter is still fine
+        const proResult = limiter.check("pro-key", 100);
+        expect(proResult.allowed).toBe(true);
+        expect(proResult.remaining).toBe(99);
+    });
+
+    it("remaining reflects override limit", () => {
+        const r1 = limiter.check("pro-key", 100);
+        expect(r1.remaining).toBe(99);
+
+        const r2 = limiter.check("free-key", 5);
+        expect(r2.remaining).toBe(4);
+    });
+});

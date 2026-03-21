@@ -16,6 +16,7 @@ function freshDb() {
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             key_hash TEXT NOT NULL,
+            plan TEXT NOT NULL DEFAULT 'FREE',
             active INTEGER NOT NULL DEFAULT 1,
             created_at INTEGER NOT NULL
         )
@@ -82,11 +83,12 @@ describe("createApiKey", () => {
 describe("validateApiKey", () => {
     beforeEach(freshDb);
 
-    it("returns key ID for a valid active key", () => {
+    it("returns { id, plan } for a valid active key", () => {
         const auth = createAuthRepository(db);
         const { id, rawKey } = auth.createApiKey("valid-key");
 
-        expect(auth.validateApiKey(rawKey)).toBe(id);
+        const result = auth.validateApiKey(rawKey);
+        expect(result).toEqual({ id, plan: "FREE" });
     });
 
     it("returns null for a random string", () => {
@@ -121,9 +123,9 @@ describe("validateApiKey", () => {
         const k2 = auth.createApiKey("key-2");
         const k3 = auth.createApiKey("key-3");
 
-        expect(auth.validateApiKey(k1.rawKey)).toBe(k1.id);
-        expect(auth.validateApiKey(k2.rawKey)).toBe(k2.id);
-        expect(auth.validateApiKey(k3.rawKey)).toBe(k3.id);
+        expect(auth.validateApiKey(k1.rawKey)).toEqual({ id: k1.id, plan: "FREE" });
+        expect(auth.validateApiKey(k2.rawKey)).toEqual({ id: k2.id, plan: "FREE" });
+        expect(auth.validateApiKey(k3.rawKey)).toEqual({ id: k3.id, plan: "FREE" });
         expect(auth.validateApiKey("wrong-key")).toBeNull();
     });
 
@@ -164,7 +166,41 @@ describe("revokeApiKey", () => {
 
         auth.revokeApiKey(k2.id);
 
-        expect(auth.validateApiKey(k1.rawKey)).toBe(k1.id);
+        expect(auth.validateApiKey(k1.rawKey)).toEqual({ id: k1.id, plan: "FREE" });
         expect(auth.validateApiKey(k2.rawKey)).toBeNull();
+    });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// plan assignment
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("plan assignment", () => {
+    beforeEach(freshDb);
+
+    it("defaults to FREE plan", () => {
+        const auth = createAuthRepository(db);
+        const { rawKey } = auth.createApiKey("default-plan");
+
+        const result = auth.validateApiKey(rawKey);
+        expect(result!.plan).toBe("FREE");
+    });
+
+    it("creates PRO key when specified", () => {
+        const auth = createAuthRepository(db);
+        const { rawKey } = auth.createApiKey("pro-key", "PRO");
+
+        const result = auth.validateApiKey(rawKey);
+        expect(result!.plan).toBe("PRO");
+    });
+
+    it("stores plan in database", () => {
+        const auth = createAuthRepository(db);
+        auth.createApiKey("free-key", "FREE");
+        auth.createApiKey("pro-key", "PRO");
+
+        const rows = db.select().from(apiKeys).all();
+        expect(rows[0].plan).toBe("FREE");
+        expect(rows[1].plan).toBe("PRO");
     });
 });

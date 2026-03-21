@@ -33,17 +33,27 @@ export function requireApiKey(req: Request, res: Response, next: NextFunction): 
         return;
     }
 
+    // ─── Internal API Key Bypass (Next.js server-to-server) ──────────────
+    if (process.env.INTERNAL_API_KEY && rawKey === process.env.INTERNAL_API_KEY) {
+        req.headers["x-api-key-id"] = "internal-nextjs";
+        req.headers["x-api-key-plan"] = (req.headers["x-override-plan"] as string) || "FREE";
+        next();
+        return;
+    }
+    // ───────────────────────────────────────────────────────────────────
+
     const db = getDb();
     const auth = createAuthRepository(db);
-    const keyId = auth.validateApiKey(rawKey);
+    const keyInfo = auth.validateApiKey(rawKey);
 
-    if (!keyId) {
+    if (!keyInfo) {
         unauthorized(res);
         return;
     }
 
-    // Attach key ID for downstream use (rate limiting, logging)
-    req.headers["x-api-key-id"] = keyId;
+    // Attach key identity for downstream use (rate limiting, logging)
+    req.headers["x-api-key-id"] = keyInfo.id;
+    req.headers["x-api-key-plan"] = keyInfo.plan;
 
     next();
 }

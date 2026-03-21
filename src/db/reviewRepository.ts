@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { reviews, usageLogs } from "./schema.js";
 import type { AppDatabase } from "./index.js";
 
@@ -10,6 +10,7 @@ export interface ReviewRecord {
     clientIp: string;
     code: string;            // raw code — hashed before storage, never persisted
     language?: string;
+    level?: string;
     status: "success" | "error";
     errorCode?: string;
     result?: unknown;        // AIReviewResult — JSON.stringify before storage
@@ -27,8 +28,8 @@ export interface UsageRecord {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-export function hashCode(code: string): string {
-    return createHash("sha256").update(code).digest("hex");
+export function hashCode(code: string, language?: string, level?: string): string {
+    return createHash("sha256").update(`${code}|${language ?? ""}|${level ?? ""}`).digest("hex");
 }
 
 // ─── Repository ──────────────────────────────────────────────────────────────
@@ -40,7 +41,7 @@ export function createReviewRepository(db: AppDatabase) {
                 .values({
                     id: record.id,
                     clientIp: record.clientIp,
-                    codeHash: hashCode(record.code),
+                    codeHash: hashCode(record.code, record.language, record.level),
                     codeLength: record.code.length,
                     language: record.language ?? null,
                     status: record.status,
@@ -72,6 +73,51 @@ export function createReviewRepository(db: AppDatabase) {
                 .from(reviews)
                 .where(eq(reviews.id, id))
                 .get() ?? null;
+        },
+
+        getSuccessfulReviewByHash(hash: string) {
+            return db
+                .select()
+                .from(reviews)
+                .where(and(eq(reviews.codeHash, hash), eq(reviews.status, "success")))
+                .get() ?? null;
+        },
+
+        getReviewsByClientIp(ip: string) {
+            return db
+                .select({
+                    id: reviews.id,
+                    language: reviews.language,
+                    status: reviews.status,
+                    result: reviews.result,
+                    durationMs: reviews.durationMs,
+                    createdAt: reviews.createdAt,
+                })
+                .from(reviews)
+                .where(eq(reviews.clientIp, ip))
+                .orderBy(desc(reviews.createdAt))
+                .all();
+        },
+
+        getReviewByIdAndIp(id: string, clientIp: string) {
+            return db
+                .select()
+                .from(reviews)
+                .where(and(eq(reviews.id, id), eq(reviews.clientIp, clientIp)))
+                .get() ?? null;
+        },
+
+        deleteReviewByIdAndIp(id: string, clientIp: string): boolean {
+            const existing = db
+                .select({ id: reviews.id })
+                .from(reviews)
+                .where(and(eq(reviews.id, id), eq(reviews.clientIp, clientIp)))
+                .get();
+            if (!existing) return false;
+            db.delete(reviews)
+                .where(and(eq(reviews.id, id), eq(reviews.clientIp, clientIp)))
+                .run();
+            return true;
         },
     };
 }

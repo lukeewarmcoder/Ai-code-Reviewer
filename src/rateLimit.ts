@@ -26,16 +26,18 @@ export class RateLimiter {
     /**
      * Check whether a request from `key` is allowed.
      * Mutates internal state: records the timestamp if allowed.
+     * @param maxOverride — per-call limit override (e.g. plan-based)
      */
-    check(key: string): RateLimitResult {
+    check(key: string, maxOverride?: number): RateLimitResult {
         const now = Date.now();
         const windowStart = now - this.windowMs;
+        const max = maxOverride ?? this.maxRequests;
 
         // Get or create entry, prune expired timestamps
         let timestamps = this.store.get(key) ?? [];
         timestamps = timestamps.filter((t) => t > windowStart);
 
-        if (timestamps.length >= this.maxRequests) {
+        if (timestamps.length >= max) {
             // Blocked — calculate when the oldest entry in the window expires
             const oldestInWindow = timestamps[0];
             const retryAfterMs = oldestInWindow + this.windowMs - now;
@@ -55,7 +57,7 @@ export class RateLimiter {
 
         return {
             allowed: true,
-            remaining: this.maxRequests - timestamps.length,
+            remaining: max - timestamps.length,
             retryAfterMs: 0,
         };
     }

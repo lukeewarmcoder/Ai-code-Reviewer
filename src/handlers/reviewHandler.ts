@@ -4,6 +4,7 @@ import { defaultLimiter } from "../rateLimit.js";
 import { reviewCode, AIReviewError } from "../claude.js";
 import { logReviewCost, logReviewError, logRateLimit } from "../logger.js";
 import { recordReview } from "../db/persistence.js";
+import { PLAN_LIMITS, type PlanName } from "../config/plans.js";
 
 // ─── Client-facing error messages (never expose internals) ──────────────────
 
@@ -57,11 +58,13 @@ function failure(
 export async function handleReviewRequest(
     input: unknown,
     clientIp: string,
-    apiKeyId: string
+    apiKeyId: string,
+    apiKeyPlan: PlanName = "FREE"
 ): Promise<ReviewHttpResponse> {
     const startTime = performance.now();
     const requestId = randomUUID();
     const rateKey = apiKeyId || clientIp || "anonymous";
+    const planLimit = PLAN_LIMITS[apiKeyPlan];
 
     const baseHeaders: Record<string, string> = {
         "X-Request-Id": requestId,
@@ -80,11 +83,11 @@ export async function handleReviewRequest(
 
     // ── 2. Rate limit check ──────────────────────────────────────────────────
 
-    const rateResult = defaultLimiter.check(rateKey);
+    const rateResult = defaultLimiter.check(rateKey, planLimit);
 
     const rateLimitHeaders: Record<string, string> = {
         ...baseHeaders,
-        "X-RateLimit-Limit": "5",
+        "X-RateLimit-Limit": planLimit.toString(),
         "X-RateLimit-Remaining": rateResult.remaining.toString(),
     };
 

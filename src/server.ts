@@ -1,5 +1,8 @@
 import express from "express";
+import cors from "cors";
 import { reviewRouter } from "./routes/review.js";
+import { historyRouter } from "./routes/history.js";
+import { stripeRouter } from "./routes/stripe.js";
 import { handleAdminStatsRequest } from "./handlers/adminHandler.js";
 import { requireApiKey } from "./middleware/auth.js";
 import type { ReviewHttpResponse } from "./handlers/reviewHandler.js";
@@ -30,8 +33,9 @@ app.use((_req, res, next) => {
     next();
 });
 
-// ─── Body parser with size limit (100 KB) ────────────────────────────────────
+// ─── Middleware ──────────────────────────────────────────────────────────────
 
+app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:3000" }));
 app.use(express.json({ limit: "100kb" }));
 
 // Handle JSON parse errors
@@ -49,6 +53,9 @@ app.use((err: unknown, _req: express.Request, res: express.Response, next: expre
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
 app.use("/api/review", requireApiKey, reviewRouter);
+app.use("/api/history", requireApiKey, historyRouter);
+app.use("/api/stripe/checkout", requireApiKey, express.json(), stripeRouter);
+app.use("/api/stripe/webhook", express.raw({ type: "application/json" }), stripeRouter);
 
 app.get("/api/admin/stats", requireApiKey, (_req, res) => {
     sendHttpResponse(res, handleAdminStatsRequest());
@@ -71,7 +78,7 @@ app.use((_req, res) => {
 
 // ─── Start server (only when run directly) ───────────────────────────────────
 
-const PORT = parseInt(process.env.PORT ?? "3000", 10);
+const PORT = parseInt(process.env.PORT ?? "3001", 10);
 
 const isMainModule =
     typeof process !== "undefined" &&

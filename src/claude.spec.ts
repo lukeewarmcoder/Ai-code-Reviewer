@@ -23,6 +23,7 @@ beforeAll(() => {
 import {
     reviewCode,
     AIReviewError,
+    buildEffectivePrompt,
     MAX_IMPROVED_CODE_LENGTH,
     MAX_ARRAY_ITEM_LENGTH,
     MAX_COMPLEXITY_FIELD_LENGTH,
@@ -31,6 +32,7 @@ import {
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const VALID_RESULT = {
+    qualityScore: 95,
     bugs: ["Off-by-one error on line 3"],
     complexity: {
         time: "O(n)",
@@ -571,7 +573,9 @@ describe("Input validation", () => {
 
 describe("API errors", () => {
     it("wraps Anthropic SDK errors as API_ERROR", async () => {
-        mockCreate.mockRejectedValueOnce(new Error("Connection refused"));
+        mockCreate
+            .mockRejectedValueOnce(new Error("Connection refused"))
+            .mockRejectedValueOnce(new Error("Connection refused")); // Fallback also fails
 
         try {
             await reviewCode(SAMPLE_CODE);
@@ -579,12 +583,14 @@ describe("API errors", () => {
         } catch (err) {
             expect(err).toBeInstanceOf(AIReviewError);
             expect((err as AIReviewError).code).toBe("API_ERROR");
-            expect((err as AIReviewError).message).toMatch(/Anthropic API call failed/);
+            expect((err as AIReviewError).message).toMatch(/Anthropic API call and fallback both failed/);
         }
     });
 
     it("wraps non-Error throws from SDK", async () => {
-        mockCreate.mockRejectedValueOnce("network timeout");
+        mockCreate
+            .mockRejectedValueOnce("network timeout")
+            .mockRejectedValueOnce("network timeout");
 
         try {
             await reviewCode(SAMPLE_CODE);
@@ -862,5 +868,111 @@ describe("Memory stability", () => {
         // Verify at least some are still reachable (they may or may not be GC'd)
         const alive = errors.filter((ref) => ref.deref() !== undefined);
         expect(alive.length).toBeGreaterThanOrEqual(0);
+    });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 12. EXPERTISE LEVEL PROMPT INJECTION
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("Expertise level prompt injection", () => {
+    // ── buildEffectivePrompt unit tests ──────────────────────────────────────
+
+    it("buildEffectivePrompt includes BEGINNER mode when level is 'beginner'", () => {
+        const prompt = buildEffectivePrompt("beginner");
+        expect(prompt).toContain("EXPLANATION MODE: BEGINNER");
+        expect(prompt).not.toContain("EXPLANATION MODE: ADVANCED");
+    });
+
+    it("buildEffectivePrompt includes ADVANCED mode when level is 'advanced'", () => {
+        const prompt = buildEffectivePrompt("advanced");
+        expect(prompt).toContain("EXPLANATION MODE: ADVANCED");
+        expect(prompt).not.toContain("EXPLANATION MODE: BEGINNER");
+    });
+
+    it("buildEffectivePrompt includes neither mode when level is undefined", () => {
+        const prompt = buildEffectivePrompt();
+        expect(prompt).not.toContain("EXPLANATION MODE: BEGINNER");
+        expect(prompt).not.toContain("EXPLANATION MODE: ADVANCED");
+    });
+
+    it("buildEffectivePrompt always includes ADAPTIVE EXPLANATION DEPTH", () => {
+        expect(buildEffectivePrompt()).toContain("ADAPTIVE EXPLANATION DEPTH");
+        expect(buildEffectivePrompt("beginner")).toContain("ADAPTIVE EXPLANATION DEPTH");
+        expect(buildEffectivePrompt("advanced")).toContain("ADAPTIVE EXPLANATION DEPTH");
+    });
+
+    // ── Integration: system prompt passed to Anthropic API ───────────────────
+
+    it("passes beginner system prompt to Anthropic when level='beginner'", async () => {
+        mockCreate.mockResolvedValueOnce(makeResponse(VALID_JSON));
+
+        await reviewCode(SAMPLE_CODE, "javascript", "beginner");
+
+        const callArgs = mockCreate.mock.calls[0][0];
+        expect(callArgs.system).toContain("EXPLANATION MODE: BEGINNER");
+        expect(callArgs.system).toContain("jargon-free");
+        expect(callArgs.system).toContain("ADAPTIVE EXPLANATION DEPTH");
+    });
+
+    it("passes advanced system prompt to Anthropic when level='advanced'", async () => {
+        mockCreate.mockResolvedValueOnce(makeResponse(VALID_JSON));
+
+        await reviewCode(SAMPLE_CODE, "javascript", "advanced");
+
+        const callArgs = mockCreate.mock.calls[0][0];
+        expect(callArgs.system).toContain("EXPLANATION MODE: ADVANCED");
+        expect(callArgs.system).toContain("production-ready");
+        expect(callArgs.system).toContain("ADAPTIVE EXPLANATION DEPTH");
+    });
+
+    it("passes neutral system prompt (no mode) when level is undefined", async () => {
+        mockCreate.mockResolvedValueOnce(makeResponse(VALID_JSON));
+
+        await reviewCode(SAMPLE_CODE, "javascript");
+
+        const callArgs = mockCreate.mock.calls[0][0];
+        expect(callArgs.system).not.toContain("EXPLANATION MODE: BEGINNER");
+        expect(callArgs.system).not.toContain("EXPLANATION MODE: ADVANCED");
+        expect(callArgs.system).toContain("ADAPTIVE EXPLANATION DEPTH");
+    });
+
+    it("user message does NOT contain level instructions (moved to system prompt)", async () => {
+        mockCreate.mockResolvedValueOnce(makeResponse(VALID_JSON));
+
+        await reviewCode(SAMPLE_CODE, "javascript", "beginner");
+
+        const callArgs = mockCreate.mock.calls[0][0];
+        const userContent = callArgs.messages[0].content;
+        expect(userContent).not.toContain("beginner developer");
+        expect(userContent).not.toContain("advanced developer");
+    });
+
+    it("fallback API call also uses the expertise-level system prompt", async () => {
+        // First call fails, fallback succeeds
+        mockCreate
+            .mockRejectedValueOnce(new Error("primary failed"))
+            .mockResolvedValueOnce(makeResponse(VALID_JSON));
+
+        await reviewCode(SAMPLE_CODE, "javascript", "advanced");
+
+        // Fallback is the second call
+        const fallbackArgs = mockCreate.mock.calls[1][0];
+        expect(fallbackArgs.system).toContain("EXPLANATION MODE: ADVANCED");
+        expect(fallbackArgs.system).toContain("ADAPTIVE EXPLANATION DEPTH");
+    });
+
+    it("retry API call also uses the expertise-level system prompt", async () => {
+        // First attempt returns invalid JSON, retry succeeds
+        mockCreate
+            .mockResolvedValueOnce(makeResponse("not valid json"))
+            .mockResolvedValueOnce(makeResponse(VALID_JSON));
+
+        await reviewCode(SAMPLE_CODE, "javascript", "beginner");
+
+        // Retry is the second call
+        const retryArgs = mockCreate.mock.calls[1][0];
+        expect(retryArgs.system).toContain("EXPLANATION MODE: BEGINNER");
+        expect(retryArgs.system).toContain("ADAPTIVE EXPLANATION DEPTH");
     });
 });

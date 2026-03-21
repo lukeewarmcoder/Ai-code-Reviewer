@@ -4,6 +4,7 @@ import { ReviewRequestSchema } from "../validation.js";
 import { defaultLimiter } from "../rateLimit.js";
 import { logReviewCost, logReviewError, logRateLimit } from "../logger.js";
 import { reviewCode, AIReviewError } from "../claude.js";
+import { getCachedReview, recordReview } from "../db/persistence.js";
 
 // ─── Error code mapping ──────────────────────────────────────────────────────
 
@@ -76,11 +77,28 @@ reviewRouter.post("/", async (req: Request, res: Response): Promise<void> => {
         return;
     }
 
-    const { code, language } = parsed.data;
+    const { code, language, level } = parsed.data;
+
+    // ── Step 1.5: Plan-based limits ───────────────────────────────────────────
+
+    const plan = (req.headers["x-api-key-plan"] as string) ?? "FREE";
+    const maxLines = plan === "PRO" ? 5000 : 300;
+    const lineCount = code.split("\n").length;
+
+    if (lineCount > maxLines) {
+        errorResponse(
+            res,
+            400,
+            "CODE_TOO_LONG",
+            `Code exceeds the ${maxLines}-line limit for your ${plan} plan. You sent ${lineCount} lines.`
+        );
+        return;
+    }
 
     // ── Step 2: Rate limit check ─────────────────────────────────────────────
 
-    const rateResult = defaultLimiter.check(clientIp);
+    const rateMaxOverride = plan === "PRO" ? 1000 : undefined; // PRO = effectively unlimited
+    const rateResult = defaultLimiter.check(clientIp, rateMaxOverride);
 
     // Always set rate limit headers
     res.setHeader("X-RateLimit-Remaining", rateResult.remaining.toString());
@@ -100,20 +118,49 @@ reviewRouter.post("/", async (req: Request, res: Response): Promise<void> => {
         return;
     }
 
+    // ── Step 2.5: Cache check ────────────────────────────────────────────────
+
+    const cachedResult = getCachedReview(code, language, level);
+    if (cachedResult) {
+        logReviewCost({
+            inputTokens: 0,
+            outputTokens: 0,
+            clientIp,
+            durationMs: Date.now() - startTime,
+        });
+        
+        res.setHeader("X-Cache", "HIT");
+        successResponse(res, cachedResult);
+        return;
+    }
+
     // ── Step 3: Call AI engine ────────────────────────────────────────────────
 
     try {
-        const result = await reviewCode(code, language);
+        const result = await reviewCode(code, language, level);
 
         const durationMs = Date.now() - startTime;
+        const inputTokens = Math.ceil(code.length / 4);
+        const outputTokens = Math.ceil(JSON.stringify(result).length / 4);
 
-        // ── Step 4: Cost logging ─────────────────────────────────────────────
-        // Note: In a real integration, inputTokens/outputTokens come from
-        // the Anthropic response.usage. For now, we estimate from the result.
+        // ── Step 4: Cost logging & Persistence ────────────────────────────────
         logReviewCost({
-            inputTokens: Math.ceil(code.length / 4),      // rough estimate
-            outputTokens: Math.ceil(JSON.stringify(result).length / 4),
+            inputTokens,
+            outputTokens,
             clientIp,
+            durationMs,
+        });
+
+        recordReview({
+            id: requestId,
+            clientIp,
+            code,
+            language,
+            level,
+            status: "success",
+            result,
+            inputTokens,
+            outputTokens,
             durationMs,
         });
 
@@ -132,11 +179,34 @@ reviewRouter.post("/", async (req: Request, res: Response): Promise<void> => {
 
             // NEVER send err.raw to client
             errorResponse(res, mapping.status, mapping.clientCode, err.message);
+
+            recordReview({
+                id: requestId,
+                clientIp,
+                code,
+                language,
+                level,
+                status: "error",
+                errorCode: err.code,
+                durationMs,
+            });
+
             return;
         }
 
         // Unexpected error — never expose internals
         logReviewError({ requestId, errorCode: "UNEXPECTED", clientIp, durationMs });
+
+        recordReview({
+            id: requestId,
+            clientIp,
+            code,
+            language,
+            level,
+            status: "error",
+            errorCode: "UNEXPECTED",
+            durationMs,
+        });
 
         errorResponse(
             res,

@@ -16,6 +16,7 @@ export const ReviewRequestSchema = z.object({
         .string()
         .max(MAX_LANGUAGE_LENGTH, `language must not exceed ${MAX_LANGUAGE_LENGTH} characters`)
         .optional(),
+    level: z.enum(["beginner", "advanced"]).optional(),
 });
 
 export type ReviewRequest = z.infer<typeof ReviewRequestSchema>;
