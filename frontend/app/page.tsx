@@ -37,7 +37,7 @@ export default function Home() {
                         ⚡ Upgrade to PRO
                     </button>
                     <a
-                        href="/login" // NextAuth sign in/out page
+                        href="/api/auth/signin" // NextAuth default sign-in page
                         className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm font-semibold hover:bg-gray-700 transition"
                     >
                         Account
