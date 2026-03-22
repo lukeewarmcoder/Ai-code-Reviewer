@@ -27,7 +27,7 @@ import {
     MAX_IMPROVED_CODE_LENGTH,
     MAX_ARRAY_ITEM_LENGTH,
     MAX_COMPLEXITY_FIELD_LENGTH,
-} from "./claude.js";
+} from "../src/services/claude.service.js";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 

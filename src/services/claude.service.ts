@@ -9,7 +9,7 @@ import "dotenv/config";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const SKILLS_PATH = resolve(__dirname, "..", "skills.md");
+const SKILLS_PATH = resolve(__dirname, "..", "..", "docs", "skills.md");
 
 // ─── Load system prompt once at module init ──────────────────────────────────
 

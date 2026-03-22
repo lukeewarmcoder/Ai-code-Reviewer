@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { sql } from "drizzle-orm";
-import { createDatabase, type AppDatabase } from "./index.js";
-import { reviews } from "./schema.js";
-import { createAnalyticsRepository } from "./analyticsRepository.js";
-import { hashCode } from "./reviewRepository.js";
+import { createDatabase, type AppDatabase } from "../src/db/index.js";
+import { reviews } from "../src/db/schema.js";
+import { createAnalyticsRepository } from "../src/db/analyticsRepository.js";
+import { hashCode } from "../src/db/reviewRepository.js";
 
 // ─── Test helpers ────────────────────────────────────────────────────────────
 

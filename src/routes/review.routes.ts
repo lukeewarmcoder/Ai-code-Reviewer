@@ -1,9 +1,9 @@
 import { Router, Request, Response } from "express";
 import { randomUUID } from "node:crypto";
-import { ReviewRequestSchema } from "../validation.js";
-import { defaultLimiter } from "../rateLimit.js";
-import { logReviewCost, logReviewError, logRateLimit } from "../logger.js";
-import { reviewCode, AIReviewError } from "../claude.js";
+import { ReviewRequestSchema } from "../middleware/validate.middleware.js";
+import { defaultLimiter } from "../middleware/rateLimit.middleware.js";
+import { logReviewCost, logReviewError, logRateLimit } from "../utils/logger.js";
+import { reviewCode, AIReviewError } from "../services/claude.service.js";
 import { getCachedReview, recordReview } from "../db/persistence.js";
 
 // ─── Error code mapping ──────────────────────────────────────────────────────

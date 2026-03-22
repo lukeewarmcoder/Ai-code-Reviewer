@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { createAnalyticsRepository } from "../db/analyticsRepository.js";
-import type { ReviewHttpResponse } from "./reviewHandler.js";
+import type { ReviewHttpResponse } from "./review.controller.js";
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
 
