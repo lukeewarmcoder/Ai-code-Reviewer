@@ -6,3 +6,13 @@ data/
 *.d.ts.map
 *.tsbuildinfo
 test_output.txt
+
+# Next.js
+.next/
+out/
+build/
+.env.local
+.env.*.local
+
+# Testing
+coverage/
