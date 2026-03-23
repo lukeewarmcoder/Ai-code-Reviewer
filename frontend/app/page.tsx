@@ -3,10 +3,10 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { AlertTriangle } from "lucide-react";
-import ResultsTabs from "@/components/ResultsTabs";
+import ResultsTabs from "@/components/results/ResultsTabs";
 
 // Monaco must be loaded client‑side only (no SSR)
-const EditorView = dynamic(() => import("@/components/EditorView"), { ssr: false });
+const EditorView = dynamic(() => import("@/components/editor/EditorView"), { ssr: false });
 
 export default function Home() {
     const [result, setResult] = useState<Record<string, unknown> | null>(null);
@@ -37,7 +37,7 @@ export default function Home() {
                         ⚡ Upgrade to PRO
                     </button>
                     <a
-                        href="/login" // NextAuth sign in/out page
+                        href="/api/auth/signin" // NextAuth default sign-in page
                         className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm font-semibold hover:bg-gray-700 transition"
                     >
                         Account

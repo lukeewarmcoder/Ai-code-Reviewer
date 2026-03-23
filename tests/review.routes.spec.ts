@@ -15,18 +15,18 @@ vi.mock("@anthropic-ai/sdk", () => ({
     },
 }));
 
-vi.mock("../rateLimit.js", () => ({
+vi.mock("../src/middleware/rateLimit.middleware.js", () => ({
     defaultLimiter: { check: mockCheck },
 }));
 
-vi.mock("../middleware/auth.js", () => ({
+vi.mock("../src/middleware/auth.middleware.js", () => ({
     requireApiKey: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 
 // Set API key for the AI engine
 process.env.ANTHROPIC_API_KEY = "sk-ant-test-key";
 
-import { app } from "../server.js";
+import { app } from "../src/index.js";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 

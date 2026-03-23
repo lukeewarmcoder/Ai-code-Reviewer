@@ -1,11 +1,11 @@
 import express from "express";
 import cors from "cors";
-import { reviewRouter } from "./routes/review.js";
-import { historyRouter } from "./routes/history.js";
-import { stripeRouter } from "./routes/stripe.js";
-import { handleAdminStatsRequest } from "./handlers/adminHandler.js";
-import { requireApiKey } from "./middleware/auth.js";
-import type { ReviewHttpResponse } from "./handlers/reviewHandler.js";
+import { reviewRouter } from "./routes/review.routes.js";
+import { historyRouter } from "./routes/history.routes.js";
+import { stripeRouter } from "./routes/stripe.routes.js";
+import { handleAdminStatsRequest } from "./controllers/admin.controller.js";
+import { requireApiKey } from "./middleware/auth.middleware.js";
+import type { ReviewHttpResponse } from "./controllers/review.controller.js";
 import "dotenv/config";
 
 // ─── Handler adapter ─────────────────────────────────────────────────────────
@@ -83,7 +83,9 @@ const PORT = parseInt(process.env.PORT ?? "3001", 10);
 const isMainModule =
     typeof process !== "undefined" &&
     process.argv[1] &&
-    (process.argv[1].endsWith("server.ts") ||
+    (process.argv[1].endsWith("index.ts") ||
+        process.argv[1].endsWith("index.js") ||
+        process.argv[1].endsWith("server.ts") ||
         process.argv[1].endsWith("server.js"));
 
 if (isMainModule) {

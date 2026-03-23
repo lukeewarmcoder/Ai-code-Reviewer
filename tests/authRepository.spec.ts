@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { sql } from "drizzle-orm";
-import { createDatabase, type AppDatabase } from "./index.js";
-import { createAuthRepository } from "./authRepository.js";
-import { apiKeys } from "./schema.js";
+import { createDatabase, type AppDatabase } from "../src/db/index.js";
+import { createAuthRepository } from "../src/db/authRepository.js";
+import { apiKeys } from "../src/db/schema.js";
 
 // ─── Test helpers ────────────────────────────────────────────────────────────
 

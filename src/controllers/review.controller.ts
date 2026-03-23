@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { ReviewRequestSchema } from "../validation.js";
-import { defaultLimiter } from "../rateLimit.js";
-import { reviewCode, AIReviewError } from "../claude.js";
-import { logReviewCost, logReviewError, logRateLimit } from "../logger.js";
+import { ReviewRequestSchema } from "../middleware/validate.middleware.js";
+import { defaultLimiter } from "../middleware/rateLimit.middleware.js";
+import { reviewCode, AIReviewError } from "../services/claude.service.js";
+import { logReviewCost, logReviewError, logRateLimit } from "../utils/logger.js";
 import { recordReview } from "../db/persistence.js";
 import { PLAN_LIMITS, type PlanName } from "../config/plans.js";
 

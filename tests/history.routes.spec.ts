@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import { sql } from "drizzle-orm";
-import { createDatabase } from "../db/index.js";
-import type { AppDatabase } from "../db/index.js";
+import { createDatabase } from "../src/db/index.js";
+import type { AppDatabase } from "../src/db/index.js";
 
 // ─── In-memory DB setup ──────────────────────────────────────────────────────
 
@@ -62,16 +62,16 @@ vi.mock("@anthropic-ai/sdk", () => ({
     },
 }));
 
-vi.mock("../rateLimit.js", () => ({
+vi.mock("../src/middleware/rateLimit.middleware.js", () => ({
     defaultLimiter: { check: mockCheck },
 }));
 
-vi.mock("../middleware/auth.js", () => ({
+vi.mock("../src/middleware/auth.middleware.js", () => ({
     requireApiKey: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 
-vi.mock("../db/index.js", async (importOriginal) => {
-    const actual = await importOriginal<typeof import("../db/index.js")>();
+vi.mock("../src/db/index.js", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("../src/db/index.js")>();
     return {
         ...actual,
         getDb: () => testDb,
@@ -80,8 +80,8 @@ vi.mock("../db/index.js", async (importOriginal) => {
 
 process.env.ANTHROPIC_API_KEY = "sk-ant-test-key";
 
-import { app } from "../server.js";
-import { createReviewRepository } from "../db/reviewRepository.js";
+import { app } from "../src/index.js";
+import { createReviewRepository } from "../src/db/reviewRepository.js";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
